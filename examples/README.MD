@@ -43,6 +43,17 @@ cd examples/drizzle-adapter
 npm install && npm start
 ```
 
+### 📁 [drizzle-adapter-lab/](./drizzle-adapter-lab/)
+
+EN: Interactive advanced TypeScript Drizzle adapter lab with UI, generated YQL, traces, CTEs, YQL helpers, and DDL builders.
+
+RU: Интерактивная расширенная TypeScript-лаборатория Drizzle adapter с UI, generated YQL, trace, CTE, YQL helpers и DDL builders.
+
+```bash
+cd examples/drizzle-adapter-lab
+npm install && npm run db:up && npm start
+```
+
 ### 📁 [sls/](./sls/)
 
 EN: Serverless considerations (HTTP/2, driver lifecycle inside handler).

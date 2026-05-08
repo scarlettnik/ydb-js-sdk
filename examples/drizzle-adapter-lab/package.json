@@ -1,0 +1,35 @@
+{
+	"name": "@ydbjs/examples-drizzle-adapter-lab",
+	"version": "6.0.0",
+	"private": true,
+	"type": "module",
+	"publishConfig": {
+		"access": "restricted"
+	},
+	"scripts": {
+		"start": "tsx index.ts",
+		"dev": "DEBUG=ydbjs:* tsx watch index.ts",
+		"db:up": "docker compose up -d",
+		"db:down": "docker compose down",
+		"db:setup": "tsx src/db/setup.ts",
+		"db:demo": "tsx src/demo.ts",
+		"check": "tsc --noEmit && node --check public/app.js",
+		"test": "npm run check"
+	},
+	"dependencies": {
+		"@ydbjs/drizzle-adapter": "*",
+		"drizzle-orm": "^0.45.2",
+		"express": "^5.1.0"
+	},
+	"devDependencies": {
+		"@types/express": "^5.0.6",
+		"@types/node": "^25.6.0",
+		"tsx": "^4.8.1",
+		"typescript": "^5.9.3"
+	},
+	"engines": {
+		"node": ">=20.19.0",
+		"npm": ">=10"
+	},
+	"engineStrict": true
+}
