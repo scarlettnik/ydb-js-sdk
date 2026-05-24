@@ -1,0 +1,914 @@
+<!doctype html>
+<html lang="ru">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Проект-пример @ydbjs/drizzle-adapter</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+			rel="stylesheet"
+		/>
+		<link rel="stylesheet" href="/styles.css" />
+	</head>
+	<body>
+		<div class="page-shell">
+			<header class="hero">
+				<div class="hero-copy">
+					<p class="eyebrow">Рабочая область адаптера</p>
+					<h1>@ydbjs/drizzle-adapter</h1>
+					<p class="hero-text">
+						Рабочая панель для ручной проверки методов адаптера: CRUD, relations, joins,
+						CTE, prepared queries, scripts и DDL builders. Основной поток разбит на
+						отдельные рабочие области, чтобы не теряться в длинной странице.
+					</p>
+					<nav class="hero-nav">
+						<a
+							href="https://ydb-platform.github.io/ydb-js-sdk/guide/drizzle-adapter/"
+							target="_blank"
+							rel="noreferrer"
+							>Документация</a
+						>
+						<a href="http://localhost:8765" target="_blank" rel="noreferrer">YDB UI</a>
+					</nav>
+				</div>
+
+				<div class="hero-rail">
+					<article class="hero-card">
+						<span class="hero-label">Подключение</span>
+						<strong id="connectionString">загрузка...</strong>
+					</article>
+					<article class="hero-card">
+						<span class="hero-label">Каталог методов</span>
+						<strong id="methodSummary">загрузка...</strong>
+					</article>
+					<article class="hero-card hero-card-accent">
+						<span class="hero-label">Режим</span>
+						<strong>выполнение и предпросмотр</strong>
+					</article>
+				</div>
+			</header>
+
+			<section class="stats-grid">
+				<article class="stat-card">
+					<span>Пользователи</span><strong id="metricUsers">0</strong>
+				</article>
+				<article class="stat-card">
+					<span>Проекты</span><strong id="metricProjects">0</strong>
+				</article>
+				<article class="stat-card">
+					<span>Задачи</span><strong id="metricTasks">0</strong>
+				</article>
+				<article class="stat-card">
+					<span>К выполнению</span><strong id="metricTodoTasks">0</strong>
+				</article>
+				<article class="stat-card">
+					<span>Заблокировано</span><strong id="metricBlockedTasks">0</strong>
+				</article>
+				<article class="stat-card">
+					<span>Готово</span><strong id="metricDoneTasks">0</strong>
+				</article>
+				<article class="stat-card">
+					<span>Копии</span><strong id="metricSnapshots">0</strong>
+				</article>
+				<article class="stat-card">
+					<span>Миграции</span><strong id="metricMigrations">0</strong>
+				</article>
+			</section>
+
+			<nav class="view-switcher" aria-label="Основные рабочие области">
+				<button type="button" class="view-tab is-active" data-view-target="crud">
+					CRUD
+				</button>
+				<button type="button" class="view-tab" data-view-target="inspector">
+					Инспектор
+				</button>
+				<button type="button" class="view-tab" data-view-target="schema">
+					Схема и DDL
+				</button>
+				<button type="button" class="view-tab" data-view-target="scenarios">
+					Сценарии и методы
+				</button>
+				<button type="button" class="view-tab" data-view-target="logs">
+					Логи и сервисные таблицы
+				</button>
+			</nav>
+
+			<section
+				id="inspector-section"
+				class="panel inspector-panel panel-shell hidden"
+				data-view-panel="inspector"
+			>
+				<div class="section-head">
+					<div>
+						<p class="eyebrow">Инспектор</p>
+						<h2 id="actionTitle">Выбери метод или сценарий</h2>
+						<p id="actionDescription" class="section-copy">
+							Здесь показываются код вызова, YQL/SQL-предпросмотр и результат
+							последнего действия.
+						</p>
+					</div>
+					<div class="section-tools">
+						<span id="actionMode" class="status-badge">готово</span>
+						<a
+							id="actionDocLink"
+							class="ghost-link hidden"
+							href="#"
+							target="_blank"
+							rel="noreferrer"
+							>Открыть документацию</a
+						>
+					</div>
+				</div>
+				<div class="active-method-strip">
+					<div>
+						<p class="eyebrow">Текущая точка входа</p>
+						<strong id="actionMethodName">Метод еще не выбран</strong>
+					</div>
+					<div id="actionMethods" class="chip-row"></div>
+				</div>
+				<div class="two-up inspector-grid">
+					<article class="card">
+						<div class="card-head">
+							<p class="eyebrow">Код вызова</p>
+							<h3>Что вызывается в адаптере</h3>
+						</div>
+						<pre id="actionCode">Выбери метод, чтобы открыть пример вызова.</pre>
+					</article>
+					<article class="card">
+						<div class="card-head">
+							<p class="eyebrow">YQL / SQL</p>
+							<h3>Сгенерированный запрос</h3>
+						</div>
+						<div id="actionSqlBlocks" class="sql-block-list"></div>
+					</article>
+					<article class="card">
+						<div class="card-head">
+							<p class="eyebrow">Результат</p>
+							<h3>Ответ API</h3>
+						</div>
+						<pre id="actionResult">Операция еще не запускалась.</pre>
+					</article>
+					<article class="card">
+						<div class="card-head">
+							<p class="eyebrow">Trace</p>
+							<h3>Сводка выполнения</h3>
+						</div>
+						<pre id="actionTrace">Trace пока пуст.</pre>
+					</article>
+				</div>
+			</section>
+
+			<section id="schema-section" class="panel panel-shell hidden" data-view-panel="schema">
+				<div class="section-head">
+					<div>
+						<p class="eyebrow">Схема и DDL</p>
+						<h2>Bootstrap, миграции и runtime builders</h2>
+						<p class="section-copy">
+							Здесь собраны рабочие сценарии схемы и полный DDL-предпросмотр.
+						</p>
+					</div>
+					<div class="button-row wrap">
+						<button type="button" data-action="recreateLabSchema" class="danger-button">
+							Пересоздать схему
+						</button>
+						<button type="button" data-action="seedTutorial">Засеять данные</button>
+						<button type="button" data-action="runRuntimeDdlLifecycle">
+							Прогнать DDL lifecycle
+						</button>
+						<button type="button" data-refresh-state class="ghost-button">
+							Обновить данные
+						</button>
+					</div>
+				</div>
+				<div class="two-up preview-grid">
+					<article class="card">
+						<div class="card-head">
+							<p class="eyebrow">CREATE TABLE</p>
+							<h3>Схема таблиц</h3>
+						</div>
+						<pre id="schemaCreatePreview">Загрузка...</pre>
+					</article>
+					<article class="card">
+						<div class="card-head">
+							<p class="eyebrow">MIGRATION SQL</p>
+							<h3>Структурированные операции</h3>
+						</div>
+						<pre id="schemaMigrationPreview">Загрузка...</pre>
+					</article>
+					<article class="card">
+						<div class="card-head">
+							<p class="eyebrow">SERVICE SQL</p>
+							<h3>Lock и bootstrap</h3>
+						</div>
+						<pre id="schemaServicePreview">Загрузка...</pre>
+					</article>
+					<article class="card">
+						<div class="card-head">
+							<p class="eyebrow">ADVANCED DDL</p>
+							<h3>ALTER / CHANGEFEED / OPTIONS</h3>
+						</div>
+						<pre id="schemaAdvancedPreview">Загрузка...</pre>
+					</article>
+				</div>
+				<div class="subsection-head">
+					<div>
+						<p class="eyebrow">Предпросмотр DDL</p>
+						<h3>Группы DDL builders</h3>
+					</div>
+					<button type="button" data-action="runRuntimeDdlPreview" class="ghost-button">
+						Открыть в инспекторе
+					</button>
+				</div>
+				<div id="schemaRuntimeGroups" class="two-up runtime-grid"></div>
+			</section>
+
+			<section
+				id="workspace-section"
+				class="panel panel-shell workspace-panel"
+				data-view-panel="crud"
+			>
+				<div class="section-head">
+					<div>
+						<p class="eyebrow">Рабочая область</p>
+						<h2>CRUD</h2>
+						<p class="section-copy">
+							CRUD и batch-операции разложены по отдельным вкладкам: формы, методы и
+							реестры находятся в одном рабочем контуре.
+						</p>
+					</div>
+					<div class="section-tools section-tools-wide">
+						<div class="entity-switcher" role="tablist" aria-label="Сущности">
+							<button
+								type="button"
+								class="entity-tab is-active"
+								data-entity-target="users"
+							>
+								Пользователи
+								<span id="workspaceUsersCount" class="tab-count">0</span>
+							</button>
+							<button type="button" class="entity-tab" data-entity-target="projects">
+								Проекты
+								<span id="workspaceProjectsCount" class="tab-count">0</span>
+							</button>
+							<button type="button" class="entity-tab" data-entity-target="tasks">
+								Задачи
+								<span id="workspaceTasksCount" class="tab-count">0</span>
+							</button>
+							<button type="button" class="entity-tab" data-entity-target="batch">
+								Batch
+								<span class="tab-count">2</span>
+							</button>
+						</div>
+						<button type="button" id="refreshStateButton" class="ghost-button">
+							Обновить данные
+						</button>
+					</div>
+				</div>
+
+				<article class="entity-panel is-active" data-entity-panel="users">
+					<div class="entity-layout">
+						<div class="entity-surface">
+							<div class="entity-surface-head">
+								<div>
+									<p class="eyebrow">Сущность</p>
+									<h3>Пользователь</h3>
+								</div>
+								<span class="section-tag">создание, обновление и чтение</span>
+							</div>
+							<form id="userForm" class="form-grid">
+								<label
+									><span>Id</span
+									><input name="id" type="number" placeholder="Авто"
+								/></label>
+								<label
+									><span>Email</span
+									><input name="email" placeholder="ada@adapter.lab"
+								/></label>
+								<label
+									><span>Имя</span><input name="name" placeholder="Ada Lovelace"
+								/></label>
+								<label>
+									<span>Роль</span>
+									<select name="role">
+										<option value="architect">Архитектор</option>
+										<option value="lead">Лид</option>
+										<option value="reviewer">Ревьюер</option>
+										<option value="delivery">Координатор</option>
+										<option value="engineer">Инженер</option>
+									</select>
+								</label>
+								<label>
+									<span>Статус</span>
+									<select name="status">
+										<option value="active">Активен</option>
+										<option value="review">На ревью</option>
+										<option value="paused">Пауза</option>
+									</select>
+								</label>
+							</form>
+							<div class="action-toolbar">
+								<div class="action-columns">
+									<button
+										type="button"
+										data-form-action="insertUser"
+										data-form-id="userForm"
+									>
+										Создать
+									</button>
+									<button
+										type="button"
+										data-form-action="insertUserWithConflictUpdate"
+										data-form-id="userForm"
+										class="ghost-button"
+									>
+										Создать с обновлением
+									</button>
+									<button
+										type="button"
+										data-form-action="upsertUser"
+										data-form-id="userForm"
+									>
+										Обновить или создать
+									</button>
+								</div>
+								<div class="action-columns">
+									<button
+										type="button"
+										data-form-action="replaceUser"
+										data-form-id="userForm"
+										class="ghost-button"
+									>
+										Заменить
+									</button>
+									<button
+										type="button"
+										data-form-action="updateUser"
+										data-form-id="userForm"
+									>
+										Обновить
+									</button>
+									<button
+										type="button"
+										data-form-action="getPreparedUser"
+										data-form-id="userForm"
+										class="ghost-button"
+									>
+										Прочитать
+									</button>
+									<button
+										type="button"
+										data-form-action="deleteUser"
+										data-form-id="userForm"
+										class="danger-button"
+									>
+										Удалить
+									</button>
+								</div>
+							</div>
+						</div>
+
+						<div class="entity-surface entity-surface-table">
+							<div class="entity-surface-head">
+								<div>
+									<p class="eyebrow">Реестр</p>
+									<h3>Пользователи</h3>
+								</div>
+								<span class="section-tag">актуальные записи</span>
+							</div>
+							<div class="table-wrap">
+								<table>
+									<thead>
+										<tr>
+											<th>id</th>
+											<th>имя</th>
+											<th>роль</th>
+											<th>статус</th>
+											<th>email</th>
+											<th>действия</th>
+										</tr>
+									</thead>
+									<tbody id="usersTableBody"></tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+				</article>
+
+				<article class="entity-panel hidden" data-entity-panel="projects">
+					<div class="entity-layout">
+						<div class="entity-surface">
+							<div class="entity-surface-head">
+								<div>
+									<p class="eyebrow">Сущность</p>
+									<h3>Проект</h3>
+								</div>
+								<span class="section-tag">владелец, slug и рабочие операции</span>
+							</div>
+							<form id="projectForm" class="form-grid">
+								<label
+									><span>Id</span
+									><input name="id" type="number" placeholder="Авто"
+								/></label>
+								<label
+									><span>Slug</span
+									><input name="slug" placeholder="adapter-lab-ui"
+								/></label>
+								<label
+									><span>Название</span
+									><input name="title" placeholder="Adapter UI Lab"
+								/></label>
+								<label
+									><span>Бюджет</span
+									><input name="budget" type="number" placeholder="120"
+								/></label>
+								<label>
+									<span>Владелец</span>
+									<select name="ownerId" id="projectOwnerSelect"></select>
+								</label>
+								<label>
+									<span>Статус</span>
+									<select name="status">
+										<option value="active">Активен</option>
+										<option value="planning">Планирование</option>
+										<option value="review">Ревью</option>
+										<option value="done">Готово</option>
+									</select>
+								</label>
+							</form>
+							<div class="action-toolbar">
+								<div class="action-columns">
+									<button
+										type="button"
+										data-form-action="insertProject"
+										data-form-id="projectForm"
+									>
+										Создать
+									</button>
+									<button
+										type="button"
+										data-form-action="upsertProject"
+										data-form-id="projectForm"
+									>
+										Обновить или создать
+									</button>
+								</div>
+								<div class="action-columns">
+									<button
+										type="button"
+										data-form-action="replaceProject"
+										data-form-id="projectForm"
+										class="ghost-button"
+									>
+										Заменить
+									</button>
+									<button
+										type="button"
+										data-form-action="updateProject"
+										data-form-id="projectForm"
+									>
+										Обновить
+									</button>
+									<button
+										type="button"
+										data-form-action="getPreparedProject"
+										data-form-id="projectForm"
+										class="ghost-button"
+									>
+										Прочитать
+									</button>
+									<button
+										type="button"
+										data-form-action="deleteProject"
+										data-form-id="projectForm"
+										class="danger-button"
+									>
+										Удалить
+									</button>
+								</div>
+							</div>
+						</div>
+
+						<div class="entity-surface entity-surface-table">
+							<div class="entity-surface-head">
+								<div>
+									<p class="eyebrow">Реестр</p>
+									<h3>Проекты</h3>
+								</div>
+								<span class="section-tag">связь с владельцем</span>
+							</div>
+							<div class="table-wrap">
+								<table>
+									<thead>
+										<tr>
+											<th>id</th>
+											<th>название</th>
+											<th>владелец</th>
+											<th>статус</th>
+											<th>slug</th>
+											<th>действия</th>
+										</tr>
+									</thead>
+									<tbody id="projectsTableBody"></tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+				</article>
+
+				<article class="entity-panel hidden" data-entity-panel="tasks">
+					<div class="entity-layout">
+						<div class="entity-surface">
+							<div class="entity-surface-head">
+								<div>
+									<p class="eyebrow">Сущность</p>
+									<h3>Задача</h3>
+								</div>
+								<span class="section-tag">точечные CRUD-операции</span>
+							</div>
+							<form id="taskForm" class="form-grid form-grid-three">
+								<label
+									><span>Id</span
+									><input name="id" type="number" placeholder="Авто"
+								/></label>
+								<label
+									><span>Название</span
+									><input name="title" placeholder="Проверить SQL-предпросмотр"
+								/></label>
+								<label>
+									<span>Проект</span>
+									<select name="projectId" id="taskProjectSelect"></select>
+								</label>
+								<label>
+									<span>Исполнитель</span>
+									<select name="assigneeId" id="taskAssigneeSelect"></select>
+								</label>
+								<label>
+									<span>Статус</span>
+									<select name="status">
+										<option value="todo">К выполнению</option>
+										<option value="in-progress">В работе</option>
+										<option value="review">Ревью</option>
+										<option value="blocked">Заблокирована</option>
+										<option value="done">Готово</option>
+									</select>
+								</label>
+								<label>
+									<span>Приоритет</span>
+									<select name="priority">
+										<option value="high">Высокий</option>
+										<option value="medium">Средний</option>
+										<option value="low">Низкий</option>
+									</select>
+								</label>
+								<label
+									><span>Часы</span
+									><input name="estimateHours" type="number" placeholder="8"
+								/></label>
+							</form>
+							<div class="action-toolbar">
+								<div class="action-columns">
+									<button
+										type="button"
+										data-form-action="insertTask"
+										data-form-id="taskForm"
+									>
+										Создать
+									</button>
+									<button
+										type="button"
+										data-form-action="insertTaskWithConflictUpdate"
+										data-form-id="taskForm"
+										class="ghost-button"
+									>
+										Создать с обновлением
+									</button>
+									<button
+										type="button"
+										data-form-action="upsertTask"
+										data-form-id="taskForm"
+									>
+										Обновить или создать
+									</button>
+								</div>
+								<div class="action-columns">
+									<button
+										type="button"
+										data-form-action="replaceTask"
+										data-form-id="taskForm"
+										class="ghost-button"
+									>
+										Заменить
+									</button>
+									<button
+										type="button"
+										data-form-action="updateTask"
+										data-form-id="taskForm"
+									>
+										Обновить
+									</button>
+									<button
+										type="button"
+										data-form-action="getPreparedTask"
+										data-form-id="taskForm"
+										class="ghost-button"
+									>
+										Прочитать
+									</button>
+									<button
+										type="button"
+										data-form-action="deleteTask"
+										data-form-id="taskForm"
+										class="danger-button"
+									>
+										Удалить
+									</button>
+								</div>
+							</div>
+						</div>
+
+						<div class="entity-surface entity-surface-table">
+							<div class="entity-surface-head">
+								<div>
+									<p class="eyebrow">Реестр</p>
+									<h3>Задачи</h3>
+								</div>
+								<span class="section-tag">проект и исполнитель</span>
+							</div>
+							<div class="table-wrap table-wrap-wide">
+								<table>
+									<thead>
+										<tr>
+											<th>id</th>
+											<th>название</th>
+											<th>проект</th>
+											<th>исполнитель</th>
+											<th>статус</th>
+											<th>действия</th>
+										</tr>
+									</thead>
+									<tbody id="tasksTableBody"></tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+				</article>
+
+				<article class="entity-panel hidden" data-entity-panel="batch">
+					<div class="entity-layout entity-layout-batch">
+						<div class="entity-surface">
+							<div class="entity-surface-head">
+								<div>
+									<p class="eyebrow">Batch</p>
+									<h3>batchUpdate()</h3>
+								</div>
+								<span class="section-tag">массовое обновление</span>
+							</div>
+							<div class="form-grid">
+								<label>
+									<span>Из статуса</span>
+									<select id="batchFromStatus">
+										<option value="todo">К выполнению</option>
+										<option value="in-progress">В работе</option>
+										<option value="review">Ревью</option>
+										<option value="blocked" selected>Заблокирована</option>
+										<option value="done">Готово</option>
+									</select>
+								</label>
+								<label>
+									<span>В статус</span>
+									<select id="batchToStatus">
+										<option value="review" selected>Ревью</option>
+										<option value="done">Готово</option>
+										<option value="blocked">Заблокирована</option>
+									</select>
+								</label>
+							</div>
+							<div class="action-toolbar">
+								<div class="action-columns">
+									<button type="button" id="batchUpdateButton">
+										Массово обновить
+									</button>
+								</div>
+							</div>
+						</div>
+
+						<div class="entity-surface">
+							<div class="entity-surface-head">
+								<div>
+									<p class="eyebrow">Batch</p>
+									<h3>batchDelete()</h3>
+								</div>
+								<span class="section-tag">массовое удаление</span>
+							</div>
+							<div class="form-grid">
+								<label>
+									<span>Удалить статус</span>
+									<select id="batchDeleteStatus">
+										<option value="done" selected>Готово</option>
+										<option value="review">Ревью</option>
+										<option value="blocked">Заблокирована</option>
+									</select>
+								</label>
+							</div>
+							<div class="action-toolbar">
+								<div class="action-columns">
+									<button
+										type="button"
+										id="batchDeleteButton"
+										class="danger-button"
+									>
+										Массово удалить
+									</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+			</section>
+
+			<section
+				id="playground-section"
+				class="panel panel-shell hidden"
+				data-view-panel="scenarios"
+			>
+				<div class="section-head">
+					<div>
+						<p class="eyebrow">Навигатор</p>
+						<h2>Сценарии и каталог методов</h2>
+						<p class="section-copy">
+							Разделен на два режима: рабочие сценарии и каталог доступных методов.
+						</p>
+					</div>
+					<div class="explorer-switcher" role="tablist" aria-label="Режим explorer">
+						<button
+							type="button"
+							class="explorer-tab is-active"
+							data-explorer-target="scenarios"
+						>
+							Сценарии
+						</button>
+						<button type="button" class="explorer-tab" data-explorer-target="methods">
+							Методы
+						</button>
+					</div>
+				</div>
+
+				<div class="explorer-panel is-active" data-explorer-panel="scenarios">
+					<div id="scenarioFilters" class="filter-row"></div>
+					<div class="scenario-workspace">
+						<div>
+							<div id="scenarioList" class="scenario-list"></div>
+						</div>
+						<div class="control-stack">
+							<article class="card control-card">
+								<div class="card-head">
+									<p class="eyebrow">insert().select()</p>
+									<h3>Копии задач</h3>
+								</div>
+								<div class="button-row wrap">
+									<label class="inline-field">
+										<span>Источник</span>
+										<select id="snapshotStatusSelect">
+											<option value="blocked" selected>Заблокирована</option>
+											<option value="review">Ревью</option>
+											<option value="todo">К выполнению</option>
+										</select>
+									</label>
+									<button type="button" id="insertSnapshotsButton">
+										Скопировать в task_copies
+									</button>
+								</div>
+							</article>
+
+							<article class="card control-card">
+								<div class="card-head">
+									<p class="eyebrow">Raw SQL</p>
+									<h3>Точечный db.get()</h3>
+								</div>
+								<div class="button-row wrap">
+									<label class="inline-field">
+										<span>ID проекта</span>
+										<input id="rawProjectId" type="number" placeholder="2001" />
+									</label>
+									<button type="button" id="rawGetProjectButton">
+										Прочитать проект
+									</button>
+								</div>
+							</article>
+
+							<article class="card control-card control-card-wide">
+								<div class="card-head">
+									<p class="eyebrow">YQL script</p>
+									<h3>Live action через defineAction()</h3>
+								</div>
+								<div class="form-grid">
+									<label
+										><span>ID задачи</span
+										><input id="scriptTaskId" type="number" placeholder="3006"
+									/></label>
+									<label
+										><span>Новый заголовок</span
+										><input
+											id="scriptTaskTitle"
+											placeholder="Задача после script action"
+									/></label>
+								</div>
+								<div class="button-row wrap">
+									<button type="button" id="runScriptButton">
+										Запустить script action
+									</button>
+								</div>
+							</article>
+						</div>
+					</div>
+				</div>
+
+				<div class="explorer-panel hidden" data-explorer-panel="methods">
+					<div class="method-toolbar">
+						<label class="search-field">
+							<span>Поиск по методу или описанию</span>
+							<input
+								id="methodSearch"
+								placeholder="Например: groupBy, yqlScript, buildAddIndexSql"
+							/>
+						</label>
+						<div id="methodSectionFilters" class="filter-row"></div>
+					</div>
+					<div id="methodCatalog" class="method-catalog"></div>
+				</div>
+			</section>
+
+			<section class="two-up support-grid hidden" data-view-panel="logs">
+				<article class="panel panel-shell">
+					<div class="section-head compact-head">
+						<div>
+							<p class="eyebrow">Task copies</p>
+							<h2>Четвертая таблица</h2>
+						</div>
+						<span class="section-tag">целевая таблица insert().select()</span>
+					</div>
+					<div class="table-wrap">
+						<table>
+							<thead>
+								<tr>
+									<th>id</th>
+									<th>название</th>
+									<th>статус</th>
+									<th>приоритет</th>
+									<th>updated</th>
+								</tr>
+							</thead>
+							<tbody id="snapshotsTableBody"></tbody>
+						</table>
+					</div>
+				</article>
+
+				<article class="panel panel-shell">
+					<div class="section-head compact-head">
+						<div>
+							<p class="eyebrow">Миграции</p>
+							<h2>История и lock snapshot</h2>
+						</div>
+						<span class="section-tag">история и блокировки</span>
+					</div>
+					<div class="table-wrap compact-table">
+						<table>
+							<thead>
+								<tr>
+									<th>name</th>
+									<th>status</th>
+									<th>progress</th>
+									<th>owner</th>
+								</tr>
+							</thead>
+							<tbody id="migrationHistoryBody"></tbody>
+						</table>
+					</div>
+					<article class="card lock-card">
+						<div class="card-head">
+							<p class="eyebrow">Lock rows</p>
+							<h3>Состояние service table</h3>
+						</div>
+						<pre id="migrationLocksPreview">Загрузка...</pre>
+					</article>
+				</article>
+			</section>
+
+			<section id="query-log-section" class="panel panel-shell hidden" data-view-panel="logs">
+				<div class="section-head compact-head">
+					<div>
+						<p class="eyebrow">Журнал запросов</p>
+						<h2>Последние обращения к YDB</h2>
+					</div>
+					<span class="section-tag">история выполнения</span>
+				</div>
+				<div id="queryLog" class="query-log"></div>
+			</section>
+		</div>
+
+		<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+		<script type="module" src="/app.js"></script>
+	</body>
+</html>
